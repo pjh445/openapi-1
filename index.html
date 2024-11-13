@@ -1,68 +1,110 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>국립현대미술관 밀집도</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공공데이터 - Open API 활용</title>
     <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      body {
-        max-width: 1200px;
-        margin: auto;
-      }
-      .alert-item {
-        border: 1px solid red;
-        padding: 10px;
-        margin-bottom: 10px;
-      }
+        h1 {
+            text-align: center;
+        }
+        #result {
+            width: 800px;
+            margin: auto;
+        }
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 5px;
+            text-align: center;
+        }
+        th {
+            padding: 8px;
+            background: #ddd;
+            font-size:1.1rem;
+        }
+        th.date {
+            width: 22%;
+        }
+        th.val {
+            width: 15%;
+        }        
+        /* 조건에 맞는 배경색 */
+        .highAlert {
+            background-color: red;
+            color: white;
+        }
     </style>
+</head>
+<body>
+    <h1>미세먼지 지역별 경보 발령 및 해제 시간</h1>
+    <table id="result">
+        <tr>
+            <th class="date">경보발령일</th>
+            <th>경보지역</th>
+            <th class="val">경보수치</th>
+            <th class="date">경보해제일</th>
+            <th class="val">해제수치</th>
+        </tr>
+    </table>
+
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        // API URL
-        const url = 'https://apis.data.go.kr/1371033/mmcadensity/congestion?serviceKey=u9ids4VxsKVpFzEzkWWsO1MZBY2L%2Fdoo0TLquOwRRTw6Ahbm5Mim42P%2BXvt3Fhd6wm8OHhTvuGWHsRgfNyvT5A%3D%3D&spaceCode=MMCA-SPACE-1005';
+        // DOM이 로드된 후 실행
+        document.addEventListener('DOMContentLoaded', () => {
+            const table = document.getElementById('result');  // 결과를 출력할 table 요소
 
-        // 비동기적으로 API 데이터를 가져오는 함수
-        async function fetchData() {
-          try {
-            const response = await fetch(url);
+            // 데이터를 가져오는 함수
+            function fetchData() {
+                fetch('https://apis.data.go.kr/B552584/UlfptcaAlarmInqireSvc/getUlfptcaAlarmInfo?serviceKey=u9ids4VxsKVpFzEzkWWsO1MZBY2L%2Fdoo0TLquOwRRTw6Ahbm5Mim42P%2BXvt3Fhd6wm8OHhTvuGWHsRgfNyvT5A%3D%3D&returnType=json&numOfRows=100&pageNo=1&year=2020&itemCode=PM10')  // API 요청
+                .then(response => response.json())  // JSON 형식으로 응답을 받음
+                .then(data => {
+                    // 데이터가 존재하는지 확인하고 처리
+                    if (data.response && data.response.body && Array.isArray(data.response.body.items)) {
+                        const items = data.response.body.items;
 
-            // 응답이 성공적이지 않으면 오류 처리
-            if (!response.ok) {
-              throw new Error(`네트워크 오류: ${response.status} - ${response.statusText}`);
+                        items.forEach(i => {
+                            // 각 항목에 대해 새로운 tr 생성
+                            const tr = document.createElement('tr');
+
+                            // 날짜 형식 및 수치 처리
+                            const issueDate = new Date(i.issueDate).toLocaleDateString();
+                            const clearDate = new Date(i.clearDate).toLocaleDateString();
+                            const issueVal = i.issueVal;
+                            const clearVal = i.clearVal;
+
+                            // 경보수치가 200 이상일 경우 배경색을 빨간색으로 변경
+                            const issueClass = issueVal >= 200 ? 'highAlert' : '';
+
+                            // tr에 데이터 추가
+                            tr.innerHTML = `
+                                <td>${issueDate}</td>
+                                <td>${i.districtName} ${i.moveName}</td>
+                                <td class="${issueClass}">${issueVal}</td>
+                                <td>${clearDate}</td>
+                                <td>${clearVal}</td>
+                            `;
+                            // tr을 테이블에 추가
+                            table.appendChild(tr);
+                        });
+                    } else {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = '<td colspan="5">데이터 형식이 예상과 다릅니다.</td>';
+                        table.appendChild(tr);
+                    }
+                })
+                .catch(error => {
+                    console.error('데이터 가져오기 오류:', error);
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td colspan="5">데이터를 가져오는 데 오류가 발생했습니다.</td>';
+                    table.appendChild(tr);
+                });
             }
 
-            // 응답 본문을 JSON으로 가져오기
-            const jsonData = await response.json();
-
-            // JSON 응답 처리 후 결과를 화면에 출력
-            document.getElementById('result').innerHTML = `
-              <div class="alert-item">
-                <p>결과코드: ${jsonData.resultCode}</p>
-                <p>결과메세지: ${jsonData.resultMsg}</p>
-                <p>총 개수: ${jsonData.totalCount}</p>
-                <p>지역: ${jsonData.data.agncNm}</p>
-                <p>전시실: ${jsonData.data.spaceNm}</p>
-                <p>혼잡도: ${jsonData.data.congestionNm}</p>
-              </div>
-            `;
-          } catch (error) {
-            // 오류 발생 시 콘솔에 출력
-            console.error('데이터 가져오기 오류:', error.message);
-            document.getElementById('result').innerHTML = `데이터를 가져오는 데 오류가 발생했습니다: ${error.message}`;
-          }
-        }
-
-        // 데이터 가져오기 함수 호출
-        fetchData();
-      });
+            // 데이터 가져오기 함수 호출
+            fetchData();
+        });
     </script>
-  </head>
-  <body>
-    <h1>국립현대미술관 밀집도</h1>
-    <div id="result"></div>
-  </body>
+</body>
 </html>
