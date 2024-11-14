@@ -7,6 +7,9 @@
     <style>
         h1 {
             text-align: center;
+            width: 800px;
+            margin: auto;
+            padding:10px;
         }
         #result {
             width: 800px;
@@ -39,7 +42,7 @@
     </style>
 </head>
 <body>
-    <h1>미세먼지 지역별 경보 발령 및 해제 시간</h1>
+    <h1>지역별 미세먼지 경보발령 및 해제시간</h1>
     <table id="result">
         <tr>
             <th class="date">경보발령일</th>
@@ -69,8 +72,9 @@
                             const tr = document.createElement('tr');
 
                             // 날짜 형식 및 수치 처리
-                            const issueDate = new Date(i.issueDate).toLocaleDateString();
-                            const clearDate = new Date(i.clearDate).toLocaleDateString();
+                            const options = { year: "numeric", month: "long", day: "numeric" };  //"년" "월" "일" 한글표시.
+                            const issueDate = new Date(i.issueDate).toLocaleDateString("ko-KR", options);//2022년3월 3일
+                            const clearDate = new Date(i.clearDate).toLocaleDateString();//2022. 3. 3
                             const issueVal = i.issueVal;
                             const clearVal = i.clearVal;
 
